@@ -79,6 +79,9 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     private volatile Thread thread;
     @SuppressWarnings("unused")
     private volatile ThreadProperties threadProperties;
+    // TODO  executor 默认是ThreadPerT
+    //   默认情况下，ThreadPerTaskExecutor 在每次执行execute 方法的时候都会通过DefaultThreadFactory
+    //   创建一个FastThreadLocalThread线程，而这个线程就是netty中的reactor线程实体
     private final Executor executor;
     private volatile boolean interrupted;
 
@@ -944,6 +947,8 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
             if (STATE_UPDATER.compareAndSet(this, ST_NOT_STARTED, ST_STARTED)) {
                 boolean success = false;
                 try {
+                    // TODO 外部线程在往任务队列里面添加任务的时候执行 startThread()
+                    //  netty会判断reactor线程有没有被启动，如果没有被启动，那就启动线程再往任务队列里面添加任务
                     doStartThread();
                     success = true;
                 } finally {
@@ -986,6 +991,8 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                 boolean success = false;
                 updateLastExecutionTime();
                 try {
+                    // TODO SingleThreadEventExecutor 在执行doStartThread的时候，会调用内部执行器executor
+                    //  的execute方法，将调用NioEventLoop的run方法的过程封装成一个runnable塞到一个线程中去执行
                     SingleThreadEventExecutor.this.run();
                     success = true;
                 } catch (Throwable t) {
@@ -993,8 +1000,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                 } finally {
                     for (;;) {
                         int oldState = state;
-                        if (oldState >= ST_SHUTTING_DOWN || STATE_UPDATER.compareAndSet(
-                                SingleThreadEventExecutor.this, oldState, ST_SHUTTING_DOWN)) {
+                        if (oldState >= ST_SHUTTING_DOWN || STATE_UPDATER.compareAndSet(SingleThreadEventExecutor.this, oldState, ST_SHUTTING_DOWN)) {
                             break;
                         }
                     }
