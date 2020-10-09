@@ -365,6 +365,11 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         return selector.keys().size() - cancelledKeys;
     }
 
+    /**
+    *@Author: liuheyong
+    *@date: 2020/10/9
+    *@Description: 重建selector解决jdk的空轮训bug
+    */
     private void rebuildSelector0() {
         final Selector oldSelector = selector;
         final SelectorTuple newSelectorTuple;
@@ -446,8 +451,9 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                         case SelectStrategy.CONTINUE:
                             continue;
                         case SelectStrategy.BUSY_WAIT:
-                            // fall-through to SELECT since the busy-wait is not supported with NIO
+                            // NIO不支持忙等待，因此无法进入SELECT
                         case SelectStrategy.SELECT:
+                            // TODO 1、轮询注册到reactor线程对用的selector上的所有的channel的IO事件
                             long curDeadlineNanos = nextScheduledTaskDeadlineNanos();
                             if (curDeadlineNanos == -1L) {
                                 curDeadlineNanos = NONE; // nothing on the calendar
@@ -461,8 +467,9 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                                 // This update is just to help block unnecessary selector wakeups
                                 // so use of lazySet is ok (no race condition)
                                 nextWakeupNanos.lazySet(AWAKE);
-                            }// fall through
+                            }
                         default:
+                            // fall through
                     }
                 } catch (IOException e) {
                     // If we receive an IOException here its because the Selector is messed up. Let's rebuild
@@ -480,10 +487,11 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                 if (ioRatio == 100) {
                     try {
                         if (strategy > 0) {
+                            // TODO 2、处理产生网络IO事件的channel
                             processSelectedKeys();
                         }
                     } finally {
-                        // Ensure we always run tasks.
+                        // TODO 3、处理任务队列
                         ranTasks = runAllTasks();
                     }
                 } else if (strategy > 0) {
@@ -500,8 +508,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                 }
                 if (ranTasks || strategy > 0) {
                     if (selectCnt > MIN_PREMATURE_SELECTOR_RETURNS && logger.isDebugEnabled()) {
-                        logger.debug("Selector.select() returned prematurely {} times in a row for Selector {}.",
-                                selectCnt - 1, selector);
+                        logger.debug("Selector.select() returned prematurely {} times in a row for Selector {}.", selectCnt - 1, selector);
                     }
                     selectCnt = 0;
                 } else if (unexpectedSelectorWakeup(selectCnt)) { // Unexpected wakeup (unusual case)
@@ -515,7 +522,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             } catch (Throwable t) {
                 handleLoopException(t);
             }
-            // Always handle shutdown even if the loop processing threw an exception.
+            // 即使循环处理引发异常，也始终要处理关闭操作。
             try {
                 if (isShuttingDown()) {
                     closeAll();

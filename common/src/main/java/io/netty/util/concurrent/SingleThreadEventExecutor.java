@@ -79,7 +79,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     private volatile Thread thread;
     @SuppressWarnings("unused")
     private volatile ThreadProperties threadProperties;
-    // TODO  executor 默认是ThreadPerT
+    // TODO  executor 默认是ThreadPerTaskExecutor
     //   默认情况下，ThreadPerTaskExecutor 在每次执行execute 方法的时候都会通过DefaultThreadFactory
     //   创建一个FastThreadLocalThread线程，而这个线程就是netty中的reactor线程实体
     private final Executor executor;
@@ -826,10 +826,16 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         execute(ObjectUtil.checkNotNull(task, "task"), false);
     }
 
+    /**
+    *@Author: liuheyong
+    *@date: 2020/10/9
+    *@Description: 开启reactor线程，然后添加任务开始执行任务
+    */
     private void execute(Runnable task, boolean immediate) {
         boolean inEventLoop = inEventLoop();
         addTask(task);
         if (!inEventLoop) {
+            // TODO 先开启reactor线程，然后添加任务开始执行任务
             startThread();
             if (isShutdown()) {
                 boolean reject = false;
@@ -847,7 +853,6 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                 }
             }
         }
-
         if (!addTaskWakesUp && immediate) {
             wakeup(inEventLoop);
         }
