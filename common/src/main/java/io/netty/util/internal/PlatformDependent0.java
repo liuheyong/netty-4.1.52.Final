@@ -889,7 +889,7 @@ final class PlatformDependent0 {
 
     // Package-private for testing only
     static int majorVersionFromJavaSpecificationVersion() {
-        return majorVersion(SystemPropertyUtil.get("java.specification.version", "1.6"));
+        return majorVersion(SystemPropertyUtil.get("java.specification.version", "1.8"));
     }
 
     // Package-private for testing only
