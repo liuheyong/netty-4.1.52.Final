@@ -254,8 +254,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         }
         selectedKeys = selectedKeySet;
         logger.trace("instrumented a special java.util.Set into: {}", unwrappedSelector);
-        return new SelectorTuple(unwrappedSelector,
-                                 new SelectedSelectionKeySetSelector(unwrappedSelector, selectedKeySet));
+        return new SelectorTuple(unwrappedSelector, new SelectedSelectionKeySetSelector(unwrappedSelector, selectedKeySet));
     }
 
     /**
@@ -574,10 +573,17 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         }
     }
 
+    /**
+    *@Author: liuheyong
+    *@date: 2020/10/10
+    *@Description: 处理IO事件
+    */
     private void processSelectedKeys() {
         if (selectedKeys != null) {
+            //一种是处理优化过的selectedKeys
             processSelectedKeysOptimized();
         } else {
+            //一种是正常的处理
             processSelectedKeysPlain(selector.selectedKeys());
         }
     }
@@ -643,7 +649,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
     private void processSelectedKeysOptimized() {
         for (int i = 0; i < selectedKeys.size; ++i) {
             final SelectionKey k = selectedKeys.keys[i];
-            // null out entry in the array to allow to have it GC'ed once the Channel close
+            // 数组中的空输出条目允许通道关闭后对其进行GC处理
             // See https://github.com/netty/netty/issues/2363
             selectedKeys.keys[i] = null;
 

@@ -374,7 +374,6 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         assert inEventLoop();
         boolean fetchedAll;
         boolean ranAtLeastOne = false;
-
         do {
             fetchedAll = fetchFromScheduledTaskQueue();
             if (runAllTasksFrom(taskQueue)) {
